@@ -1,0 +1,15 @@
+# Core Framework
+PySide6==6.6.1
+
+# AI/ML
+tensorflow==2.15.0
+numpy==1.26.4
+
+# Medical Imaging
+pydicom==2.4.4
+
+# Image Processing
+Pillow==10.2.0
+
+# Build
+pyinstaller==6.3.0

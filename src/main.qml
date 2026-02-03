@@ -8,18 +8,17 @@ Rectangle {
     height: 768
     color: "#1a1a2e"
 
-    // ============================================================
-    // STATE VARIABLES
-    // ============================================================
+    // State variables
     property bool hasImage: false
-    property string resultLabel: ""        // "Tumor" or "No Tumor"
+    property string resultLabel: ""
     property real resultConfidence: 0.0
     property bool isAnalyzing: false
     property bool isTumor: false
+    property bool volumeLoaded: false
+    property int numSlices: 0
+    property int currentSlice: 0
 
-    // ============================================================
-    // LANGUAGE SWITCHER (Top Right)
-    // ============================================================
+    // Language Switcher (Top Right)
     Rectangle {
         id: languageSwitcher
         anchors.top: parent.top
@@ -43,12 +42,10 @@ Rectangle {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 text: "EN"
-
                 background: Rectangle {
                     color: Translator.currentLanguage === "en" ? "#3498db" : "transparent"
                     radius: 6
                 }
-
                 contentItem: Text {
                     text: englishBtn.text
                     font.pixelSize: 14
@@ -57,7 +54,6 @@ Rectangle {
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
-
                 onClicked: Translator.setLanguage("en")
             }
 
@@ -72,12 +68,10 @@ Rectangle {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 text: "FR"
-
                 background: Rectangle {
                     color: Translator.currentLanguage === "fr" ? "#3498db" : "transparent"
                     radius: 6
                 }
-
                 contentItem: Text {
                     text: frenchBtn.text
                     font.pixelSize: 14
@@ -86,15 +80,12 @@ Rectangle {
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
-
                 onClicked: Translator.setLanguage("fr")
             }
         }
     }
 
-    // ============================================================
-    // LEFT PANEL
-    // ============================================================
+    // Left Panel
     Rectangle {
         id: leftPanel
         width: 280
@@ -107,7 +98,7 @@ Rectangle {
             anchors.margins: 20
             spacing: 15
 
-            // --- Upload Button ---
+            // Upload Single Image Button
             Button {
                 id: uploadButton
                 Layout.fillWidth: true
@@ -134,7 +125,34 @@ Rectangle {
                 onClicked: backend.open_image()
             }
 
-            // --- Stage Section ---
+            // NEW: Upload DICOM Folder Button
+            Button {
+                id: uploadFolderButton
+                Layout.fillWidth: true
+                Layout.preferredHeight: 50
+                text: Translator.tr("uploadFolder")
+                enabled: !root.isAnalyzing
+
+                background: Rectangle {
+                    color: !uploadFolderButton.enabled ? "#1a3a5c" :
+                           uploadFolderButton.pressed ? "#1e5a8e" :
+                           uploadFolderButton.hovered ? "#27ae60" : "#2ecc71"
+                    radius: 8
+                }
+
+                contentItem: Text {
+                    text: "📁 " + uploadFolderButton.text
+                    font.pixelSize: 15
+                    font.bold: true
+                    color: uploadFolderButton.enabled ? "#ffffff" : "#7f8c8d"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                onClicked: backend.open_dicom_folder()
+            }
+
+            // Stage Section
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 80
@@ -164,7 +182,6 @@ Rectangle {
                             height: parent.height
                             color: root.hasImage ? "#2ecc71" : "#3498db"
                             radius: 4
-
                             Behavior on width {
                                 NumberAnimation { duration: 500; easing.type: Easing.OutCubic }
                             }
@@ -173,16 +190,64 @@ Rectangle {
                 }
             }
 
-            // --- Status Section (Dynamic) ---
+            // Volume Info (shows when folder loaded)
+            Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 90
+                color: "#0f1419"
+                radius: 8
+                visible: root.volumeLoaded
+
+                ColumnLayout {
+                    anchors.fill: parent
+                    anchors.margins: 15
+                    spacing: 8
+
+                    Text {
+                        text: Translator.tr("volumeInfo")
+                        font.pixelSize: 14
+                        font.bold: true
+                        color: "#ecf0f1"
+                    }
+
+                    Text {
+                        text: root.numSlices + " slices loaded"
+                        font.pixelSize: 12
+                        color: "#2ecc71"
+                    }
+
+                    // Slice slider
+                    Slider {
+                        id: sliceSlider
+                        Layout.fillWidth: true
+                        from: 0
+                        to: root.numSlices - 1
+                        stepSize: 1
+                        value: root.currentSlice
+
+                        onValueChanged: {
+                            if (value !== root.currentSlice) {
+                                root.currentSlice = value
+                                backend.select_slice(value)
+                            }
+                        }
+                    }
+
+                    Text {
+                        text: "Slice: " + (root.currentSlice + 1) + " / " + root.numSlices
+                        font.pixelSize: 11
+                        color: "#95a5a6"
+                    }
+                }
+            }
+
+            // Status Section
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 70
                 color: root.hasImage ? (root.isTumor ? "#c0392b" : "#27ae60") : "#34495e"
                 radius: 8
-
-                Behavior on color {
-                    ColorAnimation { duration: 400 }
-                }
+                Behavior on color { ColorAnimation { duration: 400 } }
 
                 ColumnLayout {
                     anchors.fill: parent
@@ -210,7 +275,7 @@ Rectangle {
                 }
             }
 
-            // --- Diagnosis Section (Dynamic) ---
+            // Diagnosis Section
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 110
@@ -231,8 +296,7 @@ Rectangle {
 
                     Text {
                         id: diagnosisType
-                        text: root.hasImage ? root.resultLabel :
-                              Translator.tr("pending")
+                        text: root.hasImage ? root.resultLabel : Translator.tr("pending")
                         font.pixelSize: 18
                         font.bold: true
                         color: root.hasImage ? (root.isTumor ? "#e74c3c" : "#2ecc71") : "#7f8c8d"
@@ -250,7 +314,7 @@ Rectangle {
                 }
             }
 
-            // --- Confidence Section (Dynamic) ---
+            // Confidence Section
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 75
@@ -286,24 +350,18 @@ Rectangle {
                             color: root.resultConfidence >= 0.9 ? "#2ecc71" :
                                    root.resultConfidence >= 0.7 ? "#f39c12" : "#e74c3c"
                             radius: 5
-
                             Behavior on width {
                                 NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
                             }
-                            Behavior on color {
-                                ColorAnimation { duration: 300 }
-                            }
+                            Behavior on color { ColorAnimation { duration: 300 } }
                         }
                     }
                 }
             }
 
-            // Spacer
-            Item {
-                Layout.fillHeight: true
-            }
+            Item { Layout.fillHeight: true }
 
-            // --- Warning Note ---
+            // Warning Note
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 80
@@ -322,7 +380,7 @@ Rectangle {
                 }
             }
 
-            // --- Close Button ---
+            // Close Button
             Button {
                 id: closeButton
                 Layout.fillWidth: true
@@ -348,9 +406,7 @@ Rectangle {
         }
     }
 
-    // ============================================================
-    // RIGHT PANEL - Main Content
-    // ============================================================
+    // Right Panel - Main Content
     Rectangle {
         id: rightPanel
         anchors.left: leftPanel.right
@@ -364,7 +420,6 @@ Rectangle {
             anchors.margins: 30
             spacing: 20
 
-            // Title
             Text {
                 Layout.alignment: Qt.AlignHCenter
                 text: Translator.tr("mainTitle")
@@ -373,7 +428,6 @@ Rectangle {
                 color: "#ecf0f1"
             }
 
-            // Image Display Area
             Rectangle {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
@@ -381,10 +435,7 @@ Rectangle {
                 radius: 10
                 border.color: root.hasImage ? (root.isTumor ? "#e74c3c" : "#2ecc71") : "#3498db"
                 border.width: 2
-
-                Behavior on border.color {
-                    ColorAnimation { duration: 400 }
-                }
+                Behavior on border.color { ColorAnimation { duration: 400 } }
 
                 Image {
                     id: mriImage
@@ -394,7 +445,6 @@ Rectangle {
                     source: ""
                 }
 
-                // Placeholder
                 Text {
                     id: placeholderText
                     anchors.centerIn: parent
@@ -405,7 +455,6 @@ Rectangle {
                     visible: !root.hasImage
                 }
 
-                // Analyzing indicator
                 Text {
                     anchors.centerIn: parent
                     text: Translator.tr("analyzing") + "..."
@@ -422,7 +471,7 @@ Rectangle {
                     }
                 }
 
-                // Result Overlay (appears after prediction)
+                // Result Overlay
                 Rectangle {
                     id: resultOverlay
                     anchors.right: parent.right
@@ -442,7 +491,6 @@ Rectangle {
                         width: parent.width - 30
                         spacing: 10
 
-                        // Result title
                         Text {
                             Layout.fillWidth: true
                             text: root.isTumor ? Translator.tr("abnormalDetected") : Translator.tr("normalDetected")
@@ -452,14 +500,8 @@ Rectangle {
                             horizontalAlignment: Text.AlignHCenter
                         }
 
-                        // Divider
-                        Rectangle {
-                            Layout.fillWidth: true
-                            height: 1
-                            color: "#7f8c8d"
-                        }
+                        Rectangle { Layout.fillWidth: true; height: 1; color: "#7f8c8d" }
 
-                        // Diagnosis
                         Text {
                             Layout.fillWidth: true
                             text: Translator.tr("diagnosis")
@@ -475,14 +517,8 @@ Rectangle {
                             color: root.isTumor ? "#e74c3c" : "#2ecc71"
                         }
 
-                        // Divider
-                        Rectangle {
-                            Layout.fillWidth: true
-                            height: 1
-                            color: "#7f8c8d"
-                        }
+                        Rectangle { Layout.fillWidth: true; height: 1; color: "#7f8c8d" }
 
-                        // Confidence
                         Text {
                             Layout.fillWidth: true
                             text: Translator.tr("confidence") + ": " + (root.resultConfidence * 100).toFixed(1) + "%"
@@ -492,7 +528,6 @@ Rectangle {
                                    root.resultConfidence >= 0.7 ? "#f39c12" : "#e74c3c"
                         }
 
-                        // Mini confidence bar
                         Rectangle {
                             Layout.fillWidth: true
                             height: 6
@@ -505,14 +540,12 @@ Rectangle {
                                 color: root.resultConfidence >= 0.9 ? "#2ecc71" :
                                        root.resultConfidence >= 0.7 ? "#f39c12" : "#e74c3c"
                                 radius: 3
-
                                 Behavior on width {
                                     NumberAnimation { duration: 600; easing.type: Easing.OutCubic }
                                 }
                             }
                         }
 
-                        // Description
                         Text {
                             Layout.fillWidth: true
                             text: root.isTumor ? Translator.tr("tumorDescription") : Translator.tr("noTumorDescription")
@@ -527,9 +560,7 @@ Rectangle {
         }
     }
 
-    // ============================================================
-    // BACKEND CONNECTIONS
-    // ============================================================
+    // Backend Connections
     Connections {
         target: backend
 
@@ -552,15 +583,24 @@ Rectangle {
             root.isAnalyzing = false
             statusText.text = "Error: " + error
         }
+
+        function onVolumeLoaded(numSlices, firstSlicePath) {
+            root.volumeLoaded = true
+            root.numSlices = numSlices
+            root.currentSlice = 0
+        }
+
+        function onVisualization3DReady(htmlPath) {
+            console.log("3D visualization ready:", htmlPath)
+            // Open in default browser
+            Qt.openUrlExternally("file:///" + htmlPath)
+        }
     }
 
     Connections {
         target: Translator
         function onLanguageChanged() {
-            // Force UI refresh on language change
-            if (root.hasImage && !root.isAnalyzing) {
-                // Texts bound to Translator.tr() update automatically
-            }
+            // Auto-refresh
         }
     }
 }

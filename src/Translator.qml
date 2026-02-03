@@ -116,7 +116,21 @@ QtObject {
         "noImageLoaded": {
             "en": "No Image Loaded\n\nClick 'Upload Image' to begin analysis",
             "fr": "Aucune Image Chargée\n\nCliquez sur 'Télécharger l'image' pour commencer"
+        },
+        "uploadFolder": {
+            "en": "Upload DICOM Folder",
+            "fr": "Télécharger Dossier DICOM"
+        },
+        "volumeInfo": {
+            "en": "3D Volume",
+            "fr": "Volume 3D"
+        },
+        "view3D": {
+            "en": "View in 3D",
+            "fr": "Voir en 3D"
         }
+
+
     })
 
     function tr(key) {
