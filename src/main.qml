@@ -8,7 +8,8 @@ Rectangle {
     height: 768
     color: "#1a1a2e"
 
-    // State variables
+
+    
     property bool hasImage: false
     property string resultLabel: ""
     property real resultConfidence: 0.0

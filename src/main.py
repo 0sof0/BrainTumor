@@ -9,7 +9,8 @@ from PIL import Image
 import tensorflow as tf
 import pydicom
 from pydicom.pixel_data_handlers.util import apply_modality_lut, apply_voi_lut
-
+ 
+ #d
 
 def resource_path(relative_path):
     try:
